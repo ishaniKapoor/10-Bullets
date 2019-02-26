@@ -1,0 +1,176 @@
+import javalib.worldimages.*;
+import javalib.funworld.*;
+
+// foldr : (X Y -> Y) Y [List-of X] -> Y
+interface IRed<X, Y> {
+  Y red(X x, Y y);
+}
+
+class FilterOffscreen implements IRed<IProjectile, ILo<IProjectile>> {
+  int x;
+  int y;
+  FilterOffscreen(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+  
+  /* FIELDS:
+   * this.x ... x
+   * this.y ... y
+   * METHOD:
+   * this.red(IProjectile, ILo<IProjectile>) ... ILo<IProjectile>
+   */
+
+  // adds projectile to list if it is not off-screen
+  public ILo<IProjectile> red(IProjectile x, ILo<IProjectile> y) {
+    if(x.isOffscreen(this.x, this.y)) {
+      return y;
+    } else {
+      return new ConsLo<IProjectile> (x, y);
+    }
+  }
+}
+
+class ShipCollidedWith implements IRed<IProjectile, Boolean> {
+  IProjectile theShip;
+  ShipCollidedWith(IProjectile theShip) {
+    this.theShip = theShip;
+  }
+  /*
+   * METHODS:
+   * this.red(IProjectile, Boolean) ... Boolean
+   */
+  
+  // maps the move function onto a list of projectile
+  public Boolean red(IProjectile x, Boolean y) {
+    return this.theShip.collidedWith(x) || y;
+  }
+  
+}// this.shipCollided.foldr(new ShipCollidedWith(this.ship1), false)
+
+//
+class CountCollidedShips implements IRed<IProjectile, Integer> {
+  ILo<IProjectile> loBullets;
+  CountCollidedShips(ILo<IProjectile> loBullets) {
+    this.loBullets = loBullets;
+  }
+  /*
+   * METHODS:
+   * this.red(IProjectile, ILo<IProjectile>) ... ILo<IProjectile>
+   */
+  
+  // maps the move function onto a list of projectile
+  public Integer red(IProjectile x, Integer y) {
+    if(this.loBullets.foldr(new ShipCollidedWith(x), false)) {
+      return y + 1;
+    } else {
+      return y;
+    }
+  }
+}
+
+//
+class FilterCollidedShips implements IRed<IProjectile, ILo<IProjectile>> {
+  ILo<IProjectile> loBullets;
+  FilterCollidedShips(ILo<IProjectile> loBullets) {
+    this.loBullets = loBullets;
+  }
+  /*
+   * METHODS:
+   * this.red(IProjectile, ILo<IProjectile>) ... ILo<IProjectile>
+   */
+  
+  // maps the move function onto a list of projectile
+  public ILo<IProjectile> red(IProjectile x, ILo<IProjectile> y) {
+    if(!this.loBullets.foldr(new ShipCollidedWith(x), false)) {
+      return new ConsLo<IProjectile>(x, y);
+    } else {
+      return y;
+    }
+  }
+}
+
+/*
+ * // class CollisionWrapper { int combo; ILo<IProjectile> loBullets;
+ * CollisionWrapper(int combo, ILo<IProjectile> loBullets) { this.combo = combo;
+ * this.loBullets = loBullets; }
+ * 
+ * // int getCombo() { return this.combo; }
+ * 
+ * // ILo<IProjectile> getLoBullets() { return this.loBullets; } }
+ */
+//
+class ModifyCollidedBullets implements IRed<IProjectile, ILo<IProjectile>> {
+  ILo<IProjectile> loShips;
+  MyWorld dummy = new MyWorld(0);
+  ModifyCollidedBullets(ILo<IProjectile> loShips) {
+    this.loShips = loShips;
+  }
+  /*
+   * METHODS:
+   * this.red(IProjectile, ILo<IProjectile>) ... ILo<IProjectile>
+   */
+  
+  // maps the move function onto a list of projectile
+  public ILo<IProjectile> red(IProjectile x, ILo<IProjectile> y) {
+    if(this.loShips.foldr(new ShipCollidedWith(x), false)) {
+      return this.dummy.createXBullets(x.getCombo() + 1, x.getPos(), Math.min(2 + 2 * (x.getCombo()),10), y);
+    } else {
+      return new ConsLo<IProjectile>(x, y);
+    }
+  }
+}
+
+class MoveProjectile implements IRed<IProjectile, ILo<IProjectile>> {
+  
+  /*
+   * METHODS:
+   * this.red(IProjectile, ILo<IProjectile>) ... ILo<IProjectile>
+   */
+  
+  // maps the move function onto a list of projectile
+  public ILo<IProjectile> red(IProjectile x, ILo<IProjectile> y) {
+    return new ConsLo<IProjectile>(x.move(), y);
+  }
+  
+}
+
+class DrawProjectile implements IRed<IProjectile, WorldScene> {
+  
+  /*
+   * METHODS:
+   * this.red(IProjectile, WorldScene) ... WorldScene
+   */
+  
+  // maps the move function onto a list of projectile
+  public WorldScene red(IProjectile x, WorldScene y) {
+    return x.draw(y);
+  }
+}
+
+interface ILo<T> { 
+  <Y> Y foldr(IRed<T, Y> red, Y base);
+}
+
+class ConsLo<T> implements ILo<T> {
+  T first;
+  ILo<T> rest;
+  ConsLo(T first, ILo<T> rest) {
+    this.first = first;
+    this.rest = rest;
+  }
+  
+  public <Y> Y foldr(IRed<T, Y> red, Y base){
+    return red.red(this.first, this.rest.foldr(red, base));
+  }
+}
+
+class MtLo<T> implements ILo<T> {
+  public <Y> Y foldr(IRed<T, Y> red, Y base){
+    return base;
+  }
+} 
+
+class ExamplesILo {
+  
+}
