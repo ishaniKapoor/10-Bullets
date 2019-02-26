@@ -1,0 +1,313 @@
+import javalib.funworld.*;
+import javalib.worldimages.*;
+
+import java.awt.Color;
+import java.util.Random;
+import tester.*;
+
+//represents the World
+public class MyWorld extends World {
+  ILo<IProjectile> ships;
+  ILo<IProjectile> bullets;
+  int noBullets;
+  int noShipDestroyed;
+  int combo;
+  Random random;
+  int tick;
+
+  int SCREEN_HEIGHT = 300;
+  int SCREEN_WIDTH = 500;
+  
+  int SHIP_SPAWN_CONSTRAINT = this.SCREEN_HEIGHT / 7;
+  
+  int BULLET_SPEED = 8;
+  int SHIP_SPEED = 4;
+
+  int SHIP_RADIUS = SCREEN_HEIGHT / 30;
+  int BULLET_RADIUS = 2;
+
+  int MAX_SHIP_SPAWN = 3;
+
+  int SHIP_SPAWN_RATE = 20; // tick
+
+  int TEXT_X = 100;
+  int TEXT_Y = SCREEN_HEIGHT - 20;
+
+  // main constructor, with random and tick testing
+  MyWorld(ILo<IProjectile> ships, ILo<IProjectile> bullets, int noBullets, int noShipDestroyed,
+      int combo, Random random, int tick) {
+    this.ships = ships;
+    this.bullets = bullets;
+    this.noBullets = noBullets;
+    this.noShipDestroyed = noShipDestroyed;
+    this.combo = combo;
+    this.random = random;
+    this.tick = tick;
+  }
+
+  // main constructor used by myWorld
+  MyWorld(ILo<IProjectile> ships, ILo<IProjectile> bullets, int noBullets, int noShipDestroyed,
+      int combo) {
+    this(ships,bullets,noBullets,noShipDestroyed,combo, new Random(), 0);
+  }
+
+  // for testing purposes : takes in [Ship] and [Bullet]
+  MyWorld(ILo<IProjectile> ships, ILo<IProjectile> bullets) {
+    this(ships,bullets,10,0,1, new Random(), 0);
+  }  
+
+  // the default constructor for player usage, only takes in the number of bullets
+  MyWorld(int noBullets) {
+    this(new MtLo<IProjectile>(),new MtLo<IProjectile>(), noBullets, 0, 1, new Random(), 0);
+  }
+
+  /*
+   * FIELDS:
+   * this.ships ... ILo<IProjectile>
+   * this.bullets ... ILo<IProjectile>
+   * this.noBullets ... int
+   * this.noShipDestroyed ... int
+   * this.combo ... int
+   * METHODS:
+   * this.makeScene() ... WorldScene
+   * this.onTick() ... MyWorld
+   * this.moveShip() ... MyWorld
+   * this.moveBullet() ... MyWorld
+   * this.filterOffscreen() ... MyWorld
+   * this.addNewShips(int) ... ILo<IProjectile>
+   * METHODS FOR FIELDS:
+   * this.ships.foldr() ...
+   * this.bullets.foldr() ...
+   */
+
+
+  //draws the bullets and ships upon an empty screen
+  public WorldScene makeScene() {
+    return this.drawText(this.bullets.foldr(new DrawProjectile(), this.ships.foldr(new DrawProjectile(), this.getEmptyScene())));
+  }
+  
+  // ending scene
+  public WorldScene endingScene() {
+    return this.getEmptyScene().placeImageXY(
+        new TextImage("GAME OVER", 50, Color.RED),
+        this.SCREEN_WIDTH/2,
+        this.SCREEN_HEIGHT/2);
+  }
+
+  public WorldScene drawText(WorldScene w) {
+    return w.placeImageXY(
+        new TextImage("ships destroyed: " + this.noShipDestroyed + " number o' bullets: " + this.noBullets, 
+            10, Color.BLUE),TEXT_X,TEXT_Y);
+  }
+
+  //the on tick function that moves Ships across a screen
+  public MyWorld onTick() {
+    return this
+        .incrementTick()
+        .randomShipSpawn()
+        .moveShip()
+        .moveBullet()
+        .filterOffscreen()
+        .modifyCollidedBullets()
+        .countCollidedShips()
+        .filterCollidedShips();
+  }
+
+  // hanbdles key events
+  @Override
+  public MyWorld onKeyEvent(String key) {
+    if(key.equals(" ")) {
+      return this.addBullet();
+    } else {
+      return this;
+    }
+  }
+  
+  @Override
+  public WorldEnd worldEnds() {
+    if (this.outOfBullets()) {
+      return new WorldEnd(true, this.endingScene());
+    } else {
+      return new WorldEnd(false, this.makeScene());
+    }
+  }
+  
+  boolean outOfBullets() {
+    return this.noBullets <= 0;
+  }
+
+  // moves the ships
+  public MyWorld moveShip() {
+    return new MyWorld(
+        this.ships.foldr(new MoveProjectile(), new MtLo<IProjectile>()),
+        this.bullets,
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+
+  // moves the bullets
+  public MyWorld moveBullet() {
+    return new MyWorld(
+        this.ships,
+        this.bullets.foldr(new MoveProjectile(), new MtLo<IProjectile>()),
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+
+  // removes the projectiles that are no longer onscreen
+  public MyWorld filterOffscreen() { //BROKEN!!!!!!!
+    return new MyWorld(
+        this.ships.foldr(new FilterOffscreen(this.SCREEN_WIDTH,this.SCREEN_HEIGHT), new MtLo<IProjectile>()),
+        this.bullets.foldr(new FilterOffscreen(this.SCREEN_WIDTH,this.SCREEN_HEIGHT), new MtLo<IProjectile>()),
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+
+  //
+  public MyWorld filterCollidedShips() {
+    return new MyWorld(
+        this.ships.foldr(new FilterCollidedShips(this.bullets), new MtLo<IProjectile>()),
+        this.bullets,
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+  
+  //
+  public MyWorld modifyCollidedBullets() {
+    return new MyWorld(
+        this.ships,
+        this.bullets.foldr(new ModifyCollidedBullets(this.ships), new MtLo<IProjectile>()),
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+
+  //
+  public MyWorld countCollidedShips() {
+    int numCollided = this.ships.foldr(new CountCollidedShips(this.bullets), 0);
+    return new MyWorld(
+        this.ships,
+        this.bullets,
+        this.noBullets,
+        this.noShipDestroyed + numCollided, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+
+  //creates a new Ship depending on the random number 
+  public IProjectile createRandomShip(int constraint) {
+    if(this.random.nextInt(2) == 1) {
+      return new Ship(
+          new MyPosn(0, this.random.nextInt(this.SCREEN_HEIGHT - constraint * 2) + constraint),
+          new MyPosn(this.SHIP_SPEED, 0),
+          this.SHIP_RADIUS);
+    } else {
+      return new Ship(
+          new MyPosn(this.SCREEN_WIDTH, this.random.nextInt(this.SCREEN_HEIGHT - constraint * 2) + constraint),
+          new MyPosn(this.SHIP_SPEED * -1, 0),
+          this.SHIP_RADIUS);
+    }
+  }
+
+  //creates ships until the counter is drained to zero
+  public ILo<IProjectile> addNewShips(int noShips, ILo<IProjectile> base, int constraint) {
+    if(noShips <= 0) {
+      return base;
+    } else {
+      return new ConsLo<IProjectile>(
+          this.createRandomShip(constraint), 
+          this.addNewShips(noShips - 1, base, constraint));
+    }
+  }
+
+  //generates the random amount of Ships depending on the constants
+  public MyWorld randomShipSpawn() {
+    if(tick % this.SHIP_SPAWN_RATE == 0) {
+      return new MyWorld(
+          this.addNewShips(this.random.nextInt(this.MAX_SHIP_SPAWN + 1), this.ships, this.SHIP_SPAWN_CONSTRAINT),
+          this.bullets,
+          this.noBullets,
+          this.noShipDestroyed, 
+          this.combo,
+          this.random,
+          this.tick);
+    } else {
+      return this;
+    }
+  }
+
+  // adds one to tick
+  public MyWorld incrementTick() {
+    return new MyWorld(
+        this.ships,
+        this.bullets,
+        this.noBullets,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick + 1);
+  }
+
+  // makes a new list of bullets with an additional bullet
+  public ILo<IProjectile> addInitialBullet(ILo<IProjectile> base) {
+    return new ConsLo<IProjectile>(
+        new Bullet(new MyPosn(this.SCREEN_WIDTH/2, this.SCREEN_HEIGHT), new MyPosn(0,this.BULLET_SPEED * -1), this.BULLET_RADIUS),
+        base);
+  }
+
+  // makes a new bullet and adds to myWorld
+  public MyWorld addBullet() {
+    return new MyWorld(
+        this.ships,
+        this.addInitialBullet(this.bullets),
+        this.noBullets - 1,
+        this.noShipDestroyed, 
+        this.combo,
+        this.random,
+        this.tick);
+  }
+  //creates a list of bullets with x amt of bullets and add to list
+  public ILo<IProjectile> createXBullets(
+      int x, MyPosn pos, int radius, ILo<IProjectile> base) {
+    return this.createXBulletsHelp(x, pos, radius, x, base);
+  }
+
+  // helper method: counts x to zero while keeping track of the original x for calculation
+  public ILo<IProjectile> createXBulletsHelp(
+      int x, MyPosn pos, int radius, int combo, ILo<IProjectile> base) {
+    if(x == 0) {
+      return base;
+    } else {
+      return new ConsLo<IProjectile>(
+          new Bullet(pos, this.createAngle(x * (360 / (combo)), this.BULLET_SPEED), radius, combo), 
+          this.createXBulletsHelp(x - 1, pos, radius, combo, base)); //i * (360 / (n + 1)); // combo += 1?
+    }
+  }
+
+  // makes x and y velocity with angle and magnitude
+  public MyPosn createAngle(double degrees, double magnitude) {
+    return 
+        new MyPosn((int)((Math.cos(Math.toRadians(degrees)) * magnitude)), 
+            (int)((Math.sin((Math.toRadians(degrees))) * magnitude)));
+  }
+}
+
+class ExamplesMyWorldProgram {
+
+
+}
