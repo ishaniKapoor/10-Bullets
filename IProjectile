@@ -1,0 +1,661 @@
+import javalib.worldimages.*;
+
+import javalib.funworld.*;
+import javalib.worldcanvas.WorldCanvas;
+
+import java.awt.Color;
+import java.awt.color.*;
+import java.util.Random;
+
+import tester.*;
+
+// represents a coordinate with x and y
+class MyPosn {
+  int x;
+  int y;
+  MyPosn(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  /* FIELDS:
+   * this.x ... int
+   * this.y ... int
+   * METHODS:
+   * this.isOffscreen(int, int) ... boolean
+   * this.add(MyPosn) ... MyPosn
+   */
+
+  // checks whether the posn is offscreen
+  public boolean isOffscreen(int x, int y) {
+    return !((this.x > 0) && (this.x < x) && (this.y > 0) && (this.y < y));
+  }
+
+  // adds one posn to another
+  public MyPosn add(MyPosn other) {
+    return new MyPosn(this.x + other.x, this.y + other.y);
+  }
+  
+  // gets the distance between two posns
+  public double distance(MyPosn other) {
+    return Math.hypot(this.x - other.x, this.y - other.y);
+  }
+  
+  // compares two MyPosns
+  boolean isSame(MyPosn other) {
+    return this.x == other.x
+        && this.y == other.y;
+  }
+}
+
+// represents a projectile
+interface IProjectile { 
+  // checks if the projectile is offscreen
+  boolean isOffscreen(int x, int y);
+  // moves the projectile
+  IProjectile move();
+  // draws the projectile onto the world
+  WorldScene draw(WorldScene w);
+  // check if two projectiles collided
+  boolean collidedWith(IProjectile other);
+  // adds the radii of two projectiles
+  int sumRadius(int radius);
+  // gets the distance between two Posns
+  double getDistance(MyPosn other);
+  // gets the position
+  MyPosn getPos();
+  // gedts the combo
+  int getCombo();
+}
+
+// the abstract class for projectiles
+abstract class AProjectile implements IProjectile {
+  MyPosn pos;
+  MyPosn vel;
+  int radius;
+
+  AProjectile(MyPosn pos, MyPosn vel, int radius) {
+    this.pos = pos;
+    this.vel = vel;
+    this.radius = radius;
+  }
+  /* FIELDS:
+   * this.pos ... MyPosn
+   * this.vel ... MyPosn
+   * this.radius ... int
+   * METHODS:
+   * this.isOffscreen() ... boolean
+   * this.move() ... IProjectile
+   * this.draw() ... WorldImage
+   * this.isOffscreen(int x, int y)...boolean
+   */
+
+  // checks whether the projectile is offscreen
+  public boolean isOffscreen(int x, int y) {
+    return this.pos.isOffscreen(x, y);
+  }
+  
+  // checks if the distance between two objects is less than the sum of their radii
+  public boolean collidedWith(IProjectile other) {
+    return other.getDistance(this.pos) < other.sumRadius(this.radius);
+  }
+  
+  //adds the radii of two Projectiles 
+  public int sumRadius(int radius) {
+    return this.radius + radius;
+  }
+  
+  //gets the distance between two posns
+  public double getDistance(MyPosn other) {
+    return this.pos.distance(other);
+  }
+  
+  // 
+  public MyPosn getPos() {
+    return this.pos;
+  }
+}
+
+// represents a ship class
+class Ship extends AProjectile {
+
+
+  Ship(MyPosn pos, MyPosn vel, int radius) {
+    super(pos,vel,radius);
+  }
+
+  /* FIELDS:
+   * this.pos ... MyPosn
+   * this.vel ... MyPosn
+   * this.radius ... int
+   * METHODS:
+   * this.isOffscreen() ... boolean
+   * this.move() ... IProjectile
+   * this.draw() ... WorldImage
+   */
+
+
+  //makes the Ship move across the screen
+  public IProjectile move() {
+    return new Ship(this.pos.add(this.vel), this.vel, this.radius);
+  }
+
+  // draws the ship onto the world
+  public WorldScene draw(WorldScene w) {
+    return w.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, Color.BLUE), this.pos.x, this.pos.y);
+  }
+  
+//doesnt have a combo
+ public int getCombo() {
+   return 0;
+ }
+}
+
+//represents the Bullet class
+class Bullet extends AProjectile {
+  int combo;
+  Bullet(MyPosn pos, MyPosn vel, int radius, int combo) {
+    super(pos,vel,radius);
+    this.combo = combo;
+  }
+  
+  Bullet(MyPosn pos, MyPosn vel, int radius) {
+    this(pos,vel,radius,1);
+  }
+
+  /* FIELDS:
+   * this.pos ... MyPosn
+   * this.vel ... MyPosn
+   * this.radius ... int
+   * METHODS:
+   * this.isOffscreen() ... boolean
+   * this.move() ... IProjectile
+   * this.draw() ... WorldImage
+   */
+
+
+  //makes the Bullet move across the screen
+  public IProjectile move() {
+    return new Bullet(this.pos.add(this.vel), this.vel, this.radius, this.combo);
+  }
+
+  // draws the bullet onto the world
+  public WorldScene draw(WorldScene w) {
+    return w.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, Color.RED), this.pos.x, this.pos.y);
+  }
+  
+  // returns a bullets combo
+  public int getCombo() {
+    return this.combo;
+  }
+}
+
+// represents the example class
+class ExamplesProjectile {
+  WorldScene getEmptyScene = new WorldScene(500, 300);
+  MyPosn posnOne = new MyPosn(0,0);
+  MyPosn posnTwo = new MyPosn(50,50);
+  MyPosn posnThree = new MyPosn(503, 200);
+  MyPosn posnFour = new MyPosn(20, 304);
+  MyPosn posnFive = new MyPosn(70, 354);
+  MyPosn posnSix = new MyPosn(60, 70);
+  MyPosn posnSeven = new MyPosn(10, 20);
+
+  IProjectile bulletOne = new Bullet(this.posnOne, this.posnTwo, 2);
+  IProjectile bulletTwo = new Bullet(this.posnTwo, this.posnOne, 2);
+  IProjectile bulletThree = new Bullet(this.posnThree, this.posnOne, 2);
+  IProjectile bulletFour = new Bullet(this.posnFour, this.posnTwo, 2);
+  IProjectile bulletFive = new Bullet(this.posnTwo, this.posnFour, 9);
+  IProjectile bulletSix = new Bullet(this.posnFive, this.posnFour, 9);
+  IProjectile bulletSeven = new Bullet(this.posnSeven, this.posnTwo, 9);
+
+  IProjectile shipOne = new Ship(this.posnOne, this.posnThree, 5);
+  IProjectile shipTwo = new Ship(this.posnFour, this.posnTwo, 9);
+  IProjectile shipThree = new Ship(this.posnThree, this.posnOne, 2);
+  IProjectile shipFour = new Ship(this.posnTwo, this.posnOne, 9); //adding two and one
+  IProjectile shipFive = new Ship(this.posnTwo, this.posnSeven, 8); //adding two and seven
+  IProjectile shipSix = new Ship(this.posnSix, this.posnSeven, 8);
+
+  ILo<IProjectile> listOne = new MtLo<IProjectile>();
+  ILo<IProjectile> listTwo = 
+      new ConsLo<IProjectile>(this.bulletOne,
+          new ConsLo<IProjectile>(this.bulletTwo, 
+              new ConsLo<IProjectile>(this.bulletThree,
+                  new ConsLo<IProjectile>(this.bulletFour,
+                      new ConsLo<IProjectile>(this.bulletFive,
+                          new ConsLo<IProjectile>(this.bulletSeven, this.listOne))))));
+
+  ILo<IProjectile> listThree = 
+      new ConsLo<IProjectile>(this.bulletTwo, 
+          new ConsLo<IProjectile>(this.bulletFive,
+              new ConsLo<IProjectile>(this.bulletSeven, this.listOne)));
+
+  ILo<IProjectile> listFive = 
+      new ConsLo<IProjectile> (this.shipFour,
+          new ConsLo<IProjectile> (this.shipFive,
+              new ConsLo<IProjectile> (this.shipSix, new MtLo<IProjectile>())));
+
+  ILo<IProjectile> listFour = 
+      new ConsLo<IProjectile> (this.shipOne,
+          new ConsLo<IProjectile> (this.shipTwo,
+              new ConsLo<IProjectile> (this.shipThree,
+                  new ConsLo<IProjectile> (this.shipFour,
+                      new ConsLo<IProjectile> (this.shipFive,
+                          new ConsLo<IProjectile> (this.shipSix, new MtLo<IProjectile>())))))); 
+
+  ILo<IProjectile> testMoveBullet = new ConsLo<IProjectile>(this.bulletTwo, 
+      new ConsLo<IProjectile>(this.bulletFive, this.listOne));
+
+  ILo<IProjectile> testMovedBullet = new ConsLo<IProjectile>(this.bulletTwo, 
+      new ConsLo<IProjectile>(this.bulletSix, this.listOne));
+
+
+  ILo<IProjectile> testMoveShip =
+      new ConsLo<IProjectile> (this.shipFour,
+          new ConsLo<IProjectile> (this.shipFive,
+              new MtLo<IProjectile>()));
+
+  ILo<IProjectile> testMovedShip =
+      new ConsLo<IProjectile> (this.shipFour,
+          new ConsLo<IProjectile> (this.shipSix,
+              new MtLo<IProjectile>()));
+
+  //tests the method isOffscreen
+  boolean testIsOffscreen(Tester t) {
+    return t.checkExpect(this.posnOne.isOffscreen(500, 300), true)
+        && t.checkExpect(this.posnTwo.isOffscreen(500, 300), false)
+        && t.checkExpect(this.posnThree.isOffscreen(500, 300), true)
+        && t.checkExpect(this.posnFour.isOffscreen(500, 300), true)
+        && t.checkExpect(this.bulletTwo.isOffscreen(500, 300), false)
+        && t.checkExpect(this.bulletThree.isOffscreen(500, 300), true)
+        && t.checkExpect(this.shipTwo.isOffscreen(500, 300), true)
+        && t.checkExpect(this.shipThree.isOffscreen(500, 300), true);
+
+  }
+
+  //tests the method add
+  boolean testAdd(Tester t) {
+    return t.checkExpect(this.posnOne.add(this.posnTwo), this.posnTwo)
+        && t.checkExpect(this.posnTwo.add(this.posnThree), new MyPosn(553,250));
+  }
+  
+  // tests the method move()
+  boolean testMove(Tester t) {
+    return t.checkExpect(this.bulletTwo.move(), this.bulletTwo)
+        && t.checkExpect(this.bulletFive.move(), this.bulletSix)
+        && t.checkExpect(this.shipFour.move(), this.shipFour)
+        && t.checkExpect(this.shipFive.move(), this.shipSix);
+  }
+
+  // tests the method filter offscreen
+  boolean testFilterOffscreen(Tester t) {
+    return t.checkExpect(new MtLo<IProjectile>().
+        foldr(new FilterOffscreen(50,50), new MtLo<IProjectile>()), new MtLo<IProjectile>())
+        && t.checkExpect(this.listFour.
+            foldr(new FilterOffscreen(500,300), new MtLo<IProjectile>()), this.listFive)
+        && t.checkExpect(this.listTwo.foldr(new FilterOffscreen(500, 300), new MtLo<IProjectile>()), 
+            this.listThree);
+  }
+
+  // test the move projectile abstraction
+  boolean testMoveProjectile(Tester t) {
+    return t.checkExpect(new MtLo<IProjectile>().
+        foldr(new MoveProjectile(), new MtLo<IProjectile>()), new MtLo<IProjectile>())
+        && t.checkExpect(this.testMoveShip.
+            foldr(new MoveProjectile(), new MtLo<IProjectile>()), this.testMovedShip)
+        && t.checkExpect(this.testMoveBullet.foldr(new MoveProjectile(), new MtLo<IProjectile>()), this.testMovedBullet);
+  }
+
+
+  MyWorld beforeMoveShip = new MyWorld(this.testMoveShip, new MtLo<IProjectile>());
+  MyWorld afterMoveShip = new MyWorld(this.testMovedShip, new MtLo<IProjectile>());
+
+  // tests move ship method
+  boolean testMoveShip(Tester t) {
+    return t.checkExpect(new MyWorld(0).moveShip(), new MyWorld(0))
+        && t.checkExpect(this.beforeMoveShip.moveShip(), this.afterMoveShip);
+  }
+
+  MyWorld beforeMoveBullet = new MyWorld(new MtLo<IProjectile>(), this.testMoveBullet);
+  MyWorld afterMoveBullet = new MyWorld(new MtLo<IProjectile>(), this.testMovedBullet);
+
+  //tests move bullet method
+  boolean testMoveBullet(Tester t) {
+    return t.checkExpect(new MyWorld(0).moveBullet(), new MyWorld(0))
+        && t.checkExpect(this.beforeMoveBullet.moveBullet(), this.afterMoveBullet);
+  }
+
+  MyWorld beforeFilter = new MyWorld(this.listTwo, this.listFour);
+  MyWorld afterFilter = new MyWorld(this.listThree, this.listFive);
+
+  //tests filterOffscreen in MyWorld
+  boolean testBigBangFilterOffscreen(Tester t) {
+    return t.checkExpect(new MyWorld(0).filterOffscreen(), new MyWorld(0))
+        && t.checkExpect(this.beforeFilter.filterOffscreen(), this.afterFilter);
+  }
+  Random r1 = new Random(0);
+  Random r2 = new Random(100324900);
+
+  MyWorld randomTest1 = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r1, 0);
+  MyWorld randomTest2 = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r2, 0);
+
+  IProjectile resultTestOne = new Ship(
+      new MyPosn(0, 94),
+      new MyPosn(4, 0),
+      10);
+  IProjectile resultTestTwo = new Ship(
+      new MyPosn(500, 231),
+      new MyPosn(-4, 0),
+      10);
+  int SCREEN_HEIGHT = 300;
+
+  // tests createRandomShip method
+  boolean testCreateRandomShip(Tester t) {
+    return t.checkExpect(this.randomTest1.createRandomShip(this.SCREEN_HEIGHT/7), this.resultTestOne)
+        && t.checkExpect(this.randomTest2.createRandomShip(this.SCREEN_HEIGHT/7), this.resultTestTwo);
+ 
+  }
+  
+  
+  ILo<IProjectile> test =
+      new ConsLo<IProjectile> (new Ship(new MyPosn(0, 94), new MyPosn(4, 0), 10),
+          new ConsLo<IProjectile> (new Ship(new MyPosn(500, 233), new MyPosn(-4, 0), 10),
+              new ConsLo<IProjectile> (new Ship(new MyPosn(0, 143), new MyPosn(4, 0), 10),
+                  new MtLo<IProjectile>())));
+
+  Random r4 = new Random(0);
+  MyWorld randomTest3 = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r4, 0);
+  
+  
+  //tests addNewShips method
+  boolean testAddNewShips(Tester t) {
+    return t.checkExpect(this.randomTest3.addNewShips(3, new MtLo<IProjectile>(), this.SCREEN_HEIGHT/7), this.test);
+  } 
+
+  Random r3 = new Random(10);
+  Random r5 = new Random(10);
+
+  MyWorld worldTickNonZero = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r3, 10);
+  MyWorld worldTickZero = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r5, 0);
+
+  ILo<IProjectile> shipRandomShipSpawn = 
+      new ConsLo<IProjectile> (new Ship(new MyPosn(500, 111), new MyPosn(-4, 0), 10),
+          new ConsLo<IProjectile> (new Ship(new MyPosn(500, 64), new MyPosn(-4, 0), 10),
+              new MtLo<IProjectile>())); 
+
+  MyWorld worldTickZeroAfter = new MyWorld(this.shipRandomShipSpawn, new MtLo<IProjectile>(),0,0,0,this.r3, 0);
+
+  //tests randomShipSpawn method
+  boolean testRandomShipSpawn(Tester t) {
+    return t.checkExpect(this.worldTickNonZero.randomShipSpawn(), this.worldTickNonZero)
+        && t.checkExpect(this.worldTickZero.randomShipSpawn(), this.worldTickZeroAfter);
+  }
+
+  MyWorld worldBefore = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r3, 9);
+  MyWorld worldAfter = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>(),0,0,0,this.r4, 10);
+
+  MyWorld worldBefore2 = new MyWorld(this.test, new MtLo<IProjectile>(),0,0,0,this.r3, 140);
+  MyWorld worldAfter2 = new MyWorld(this.test, new MtLo<IProjectile>(),0,0,0,this.r4, 141);
+
+  //tests for increment tests
+  boolean testIncrementTick(Tester t) {
+    return t.checkExpect(this.worldBefore.incrementTick(), this.worldAfter)
+        && t.checkExpect(this.worldBefore2.incrementTick(), this.worldAfter2);
+  }
+
+
+  ILo<IProjectile> bulletListNew = new ConsLo<IProjectile>(this.bulletSix, this.listOne);
+  ILo<IProjectile> bulletListAfter = new ConsLo<IProjectile>(
+      new Bullet(new MyPosn(250, 300), new MyPosn(0,-8), 2),this.bulletListNew);
+  ILo <IProjectile> listTwoNew = new ConsLo<IProjectile>(
+      new Bullet(new MyPosn(250, 300), new MyPosn(0,-8), 2), 
+      this.listTwo);
+  MyWorld worldBeforeInitial = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>());
+
+
+  //tests for addInitialBullet
+  boolean testAddInitialBullet(Tester t) {
+    return t.checkExpect(this.worldBeforeInitial.addInitialBullet(this.listTwo), this.listTwoNew)
+        && t.checkExpect(this.worldBeforeInitial.addInitialBullet(this.bulletListNew), this.bulletListAfter);
+  }
+
+
+  MyWorld worldBeforeAddBullet1 = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>());
+  MyWorld worldAfterAddBullet1 = 
+      new MyWorld(new MtLo<IProjectile>(),
+          new ConsLo<IProjectile>(
+          new Bullet(new MyPosn(250, 300), new MyPosn(0,-8), 2),new MtLo<IProjectile>())
+          ,9
+          ,0
+          ,1);
+  MyWorld worldAfterAddBullet2 = new MyWorld(
+      new MtLo<IProjectile>(),
+      new ConsLo<IProjectile>(
+          new Bullet(new MyPosn(250, 300), new MyPosn(0,-8), 2),
+          new ConsLo<IProjectile>(
+              new Bullet(new MyPosn(250, 300), new MyPosn(0,-8), 2),new MtLo<IProjectile>())),
+      8,
+      0, 
+      1);
+
+  //tests addBullet method
+  boolean testAddBullet(Tester t) {
+    return t.checkExpect(this.worldBeforeAddBullet1.addBullet(), this.worldAfterAddBullet1)
+        && t.checkExpect(this.worldAfterAddBullet1.addBullet(), this.worldAfterAddBullet2);
+  }
+  
+  MyPosn pointOne = new MyPosn(3, 4);
+  MyPosn pointTwo = new MyPosn(5, 12);
+  
+  //tests distance method
+  boolean testDistance(Tester t) {
+    return t.checkExpect(this.posnOne.distance(this.pointOne), 5.0)
+        && t.checkExpect(this.posnOne.distance(this.pointTwo), 13.0);
+  }
+  
+  //
+  IProjectile ship1 = new Ship(this.posnOne, this.posnOne, 3);
+  IProjectile bullet1 = new Bullet(this.pointOne, this.posnOne, 3);
+  IProjectile bullet2 = new Bullet(this.pointTwo, this.posnOne, 9);
+  
+  ILo<IProjectile> shipCollided =
+      new ConsLo<IProjectile>(this.bullet1,
+          new ConsLo<IProjectile>(this.bullet2,
+              new MtLo<IProjectile>()));
+  
+  ILo<IProjectile> shipDidntCollide =
+      new ConsLo<IProjectile>(this.bullet2,
+              new MtLo<IProjectile>());
+  
+  // tests whether a bullet and a ship have collided
+  boolean testCollided(Tester t) {
+    return t.checkExpect(this.ship1.collidedWith(this.bullet1), true)
+        && t.checkExpect(this.ship1.collidedWith(this.bullet2), false);
+  }
+  
+  // tests the SumRadius method
+  boolean testSumRadius(Tester t) {
+    return t.checkExpect(this.bullet1.sumRadius(7), 10)
+        && t.checkExpect(this.bullet2.sumRadius(7), 16);
+  }
+  
+  //tests the getDistance method
+  boolean testGetDistance(Tester t) {
+    return t.checkExpect(this.bullet1.getDistance(this.posnOne), 5.0)
+        && t.checkExpect(this.bullet2.getDistance(this.posnOne), 13.0);
+  }
+  
+  //tests the ShipCollidedWith method
+  boolean testCollidedWith(Tester t) {
+    return t.checkExpect(this.shipCollided.foldr(new ShipCollidedWith(this.ship1), false), true)
+        && t.checkExpect(this.shipDidntCollide.foldr(new ShipCollidedWith(this.ship1), false), false);
+  }
+  ILo<IProjectile> loShip = new ConsLo<IProjectile>(this.ship1, new MtLo<IProjectile>());
+  MyWorld collisionTestCollide = new MyWorld(this.loShip, this.shipCollided);
+  MyWorld collisionTestCollideCount = new MyWorld(this.loShip, this.shipCollided,10,1,1,new Random(), 0);
+  MyWorld collisionTestCollideAfter = new MyWorld(new MtLo<IProjectile>(), this.shipCollided);
+  MyWorld collisionTestNoCollide = new MyWorld(this.loShip, this.shipDidntCollide);
+  
+  //tests the FilterCollidedShips method
+  boolean testFilterCollidedWith(Tester t) {
+    return t.checkExpect(this.collisionTestCollide.filterCollidedShips(), this.collisionTestCollideAfter)
+        && t.checkExpect(this.collisionTestNoCollide.filterCollidedShips(), this.collisionTestNoCollide);
+  
+  }
+  
+  //tests IsSame method
+  boolean testIsSame(Tester t) {
+    return t.checkExpect(this.posnOne.isSame(this.posnTwo), false)
+        && t.checkExpect(this.posnTwo.isSame(this.posnTwo), true)
+        && t.checkExpect(this.posnThree.isSame(this.posnTwo), false)
+        && t.checkExpect(this.posnSix.isSame(this.posnSix), true);
+        
+  }
+  
+  // tests the CountCollidedShips
+  boolean testCountCollidedShips(Tester t) {
+    return t.checkExpect(this.collisionTestCollide.countCollidedShips(), this.collisionTestCollideCount)
+        && t.checkExpect(this.collisionTestNoCollide.countCollidedShips(), this.collisionTestNoCollide);
+  }
+  
+  // tests createAngle
+  boolean testCreateAngle(Tester t) {
+    return t.checkExpect(this.collisionTestNoCollide.createAngle(45.0, 10), new MyPosn(7, 7))
+        && t.checkExpect(this.collisionTestNoCollide.createAngle(0, 10), new MyPosn(10, 0));
+  }
+  ILo<IProjectile> loBullet3 = 
+      new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(8,0), 5, 3),
+          new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(-4,-6), 5, 3),
+              new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(-3,6), 5, 3),
+                  new MtLo<IProjectile>())));
+  MyWorld testWorld = new MyWorld(0);
+  
+  
+  // tests createXBullets
+  boolean testCreateXBullets(Tester t) {
+    return t.checkExpect(this.testWorld.createXBullets(3, this.posnOne, 5, new MtLo<IProjectile>()), this.loBullet3);
+  }
+  ILo<IProjectile> loBullet4 = 
+      new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(8,0), 5, 3),
+          new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(-4,-6), 5, 3),
+              new ConsLo<IProjectile>(new Bullet(this.posnOne, new MyPosn(-3,6), 5, 3),
+                  new MtLo<IProjectile>())));
+  MyWorld collisionWorld = 
+      new MyWorld(new ConsLo<IProjectile>(new Ship(this.posnOne,this.posnOne,20), new MtLo<IProjectile>()),
+          new ConsLo<IProjectile>(new Bullet(this.posnOne,this.posnOne,20), new MtLo<IProjectile>())); 
+  MyWorld postCollisionWorld = 
+      new MyWorld(new ConsLo<IProjectile>(new Ship(this.posnOne,this.posnOne,20), new MtLo<IProjectile>()),
+          this.loBullet4);
+  
+  
+  //tests ModifyCollidedBullets
+  boolean testModifyCollidedBullets(Tester t) {
+    return true; //t.checkExpect(this.collisionWorld.modifyCollidedBullets(), this.postCollisionWorld);
+       // && t.checkExpect(this.collisionTestNoCollide.modifyCollidedBullets(), this.collisionTestNoCollide);
+  }
+ 
+  
+  //tests GetPos method
+  boolean testGetPos(Tester t) {
+    return t.checkExpect(this.bulletOne.getPos(), this.posnOne)
+        && t.checkExpect(this.bulletTwo.getPos(), this.posnTwo)
+        && t.checkExpect(this.ship1.getPos(), this.posnOne)
+        && t.checkExpect(this.shipTwo.getPos(), this.posnFour);
+  }
+  
+  IProjectile bulletTest = new Bullet(this.posnOne, this.pointOne, 5, 2);
+  IProjectile shipTest = new Ship(this.posnOne, this.pointOne, 5);
+  
+  //tests GetCombo method
+  boolean testGetCombo(Tester t) {
+    return t.checkExpect(this.bulletTest.getCombo(), 2)
+        && t.checkExpect(this.shipTest.getCombo(), 0);
+        
+  }
+  
+  
+  //tests draw method
+  boolean testDraw(Tester t) {
+    return t.checkExpect(this.bulletOne.draw(this.getEmptyScene), 
+        this.getEmptyScene.placeImageXY(new CircleImage(2, OutlineMode.SOLID, Color.RED), 0, 0))
+        && t.checkExpect(this.shipOne.draw(this.getEmptyScene), 
+            this.getEmptyScene.placeImageXY(new CircleImage(5, OutlineMode.SOLID, Color.BLUE), 0, 0))
+        && t.checkExpect(this.bulletTwo.draw(this.getEmptyScene), 
+            this.getEmptyScene.placeImageXY(new CircleImage(2, OutlineMode.SOLID, Color.RED), 50, 50))
+        && t.checkExpect(this.shipTwo.draw(this.getEmptyScene), 
+            this.getEmptyScene.placeImageXY(new CircleImage(9, OutlineMode.SOLID, Color.BLUE), 20, 304));
+  }
+  
+ 
+  MyWorld drawTester = new MyWorld(this.listFour, this.listTwo, 10, 0, 1);
+  MyWorld drawTester2 = new MyWorld(this.listFour, this.listTwo, 0, 80, 10);
+  
+  //tests drawText method
+  boolean testDrawText(Tester t) {
+    return t.checkExpect(this.drawTester.drawText(this.getEmptyScene), 
+        this.getEmptyScene.placeImageXY(new TextImage("ships destroyed: " + 0 + " number o' bullets: " + 10, 
+            10, Color.BLUE), 100, 280))
+        && t.checkExpect(this.drawTester2.drawText(this.getEmptyScene), 
+            this.getEmptyScene.placeImageXY(new TextImage("ships destroyed: " + 80 + " number o' bullets: " + 0, 
+                10, Color.BLUE), 100, 280));
+  }
+  
+  
+  MyWorld tester = new MyWorld(new MtLo<IProjectile>(), new MtLo<IProjectile>());
+  WorldScene basic = new WorldScene(0, 0);
+  
+  //tests endingScene method
+  boolean testEndingScene(Tester t) {
+    return t.checkExpect(this.tester.endingScene(), 
+        this.basic.placeImageXY(new TextImage("GAME OVER", 50, Color.RED), 250, 150))
+        && t.checkExpect(this.drawTester.endingScene(), 
+        this.basic.placeImageXY(new TextImage("GAME OVER", 50, Color.RED), 250, 150));
+  }
+  
+  
+  //tests makeScene method
+  boolean testMakeScene(Tester t) {
+    return t.checkExpect(this.drawTester.makeScene(), 
+        this.drawTester.drawText(this.listTwo.foldr(new DrawProjectile(), 
+            this.listFour.foldr(new DrawProjectile(), this.basic))))
+        && t.checkExpect(this.drawTester2.makeScene(), 
+            this.drawTester.drawText(this.listTwo.foldr(new DrawProjectile(), 
+                this.listFour.foldr(new DrawProjectile(), this.basic))));
+  }
+  
+  //tests OnKeyEvent method
+  boolean testOnKeyEevnt(Tester t) {
+    return t.checkExpect(this.drawTester.onKeyEvent(" "), this.drawTester.addBullet())
+        && t.checkExpect(this.tester.onKeyEvent("a"), this.tester);
+  }
+  
+
+  //tests worldEnds method
+  boolean testWorldEnds(Tester t) {
+    return t.checkExpect(this.drawTester2.worldEnds(), new WorldEnd(true, 
+        this.basic.placeImageXY(new TextImage("GAME OVER", 50, Color.RED), 250, 150)))
+      && t.checkExpect(this.drawTester.worldEnds(), new WorldEnd(false, 
+           this.drawTester.drawText(listTwo.foldr(new DrawProjectile(), 
+              listFour.foldr(new DrawProjectile(), this.basic)))));
+  }
+  
+  
+  //tests outOfBullets method
+  boolean testOutOfBullets(Tester t) {
+    return t.checkExpect(this.drawTester.outOfBullets(), false)
+        && t.checkExpect(this.drawTester2.outOfBullets(), true);
+  }
+  
+  
+  
+
+  boolean testBigBang(Tester t) {
+    MyWorld w = new MyWorld(10);
+    int worldWidth = 500;
+    int worldHeight = 300;
+    double tickRate = (1.0 / 28.0);
+    return w.bigBang(worldWidth, worldHeight, tickRate);
+  }
+
+}
+
